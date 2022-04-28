@@ -5,7 +5,7 @@ and transrate to numpy dataset for MaskRCNN.
 
 ## Environment
 OS : Ubuntu 16.04.7 LTS  
-Python : 3.7  
+Python : 3.7.13
 CUDA : 10.1.105
 
 ## Quick Start
