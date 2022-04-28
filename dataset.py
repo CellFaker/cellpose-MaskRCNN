@@ -5,6 +5,9 @@
 model_type = 'cyto'
 chan = [0,0]#
 
+#Path Define
+mask_class = ["0day","3day"]
+dataset_name = "cell_dataset"#保存されるモデル名に反映
 
 #Function Define
 from cellpose import models, io
@@ -27,7 +30,7 @@ def img_to_cellpose(img_path):
     # save results so you can load in gui
     #io.masks_flows_to_seg(img, masks, flows, diams, img_path, chan)
 
-    # save results as png
+    #save results as png
     #plt.imsave("test.png",masks)
 
     return mask
@@ -68,6 +71,7 @@ from mrcnn.model import log
 import os
 import glob
 import pathlib
+import itertools
 
 from PIL import Image
 
@@ -75,74 +79,43 @@ class ShapesDataset(utils.Dataset):
 
     def load_dataset(self, dataset_dir):
         #dataset/blood/直下フォルダ名がクラス名に対応する．
-        mask_class = ["1day","3day","5day","7day","other"]
-        dataset_name = "cell_dataset"#保存されるモデル名に反映
 
-        """データセットを登録"""
-        i = 1
-        for class_id in mask_class:
-            self.add_class(dataset_name,i,class_id)
-            i = i + 1
+        """データセットでのクラスを1から登録"""
+        for i, class_id in enumerate(mask_class):
+            self.add_class(dataset_name, i+1, class_id) 
 
-        """各クラスのフォルダ内画像を取得"""
-        images = glob.glob(os.path.join(dataset_dir, "image", "*.png"))
-        images = sorted(images)
-        for class_id in mask_class:
-            globals()["masks_" + class_id] =  glob.glob(os.path.join(dataset_dir, class_id, "*.png"))
-            globals()["masks_" + class_id] = sorted(globals()["masks_" + class_id])
+        """各クラスのフォルダ内画像Pathを取得"""
+        #image_files = [""]*len(mask_class)
+        for i, class_name in enumerate(mask_class):
+            image_paths = glob.glob(os.path.join(dataset_dir, class_name, "*.png"))
 
-        """このfor文の書き換え出来ていません"""
-        for image_path, mask_1day_path, mask_3day_path, mask_5day_path, mask_7day_path, mask_other_path in zip(images, masks_1day, masks_3day, masks_5day, masks_7day, masks_other):
+            for image_path in image_paths:
+                image_path = pathlib.Path(image_path)
+                image = Image.open(image_path)
+                height = image.size[0]
+                width = image.size[1]
 
-            """各クラスのフォルダ内画像のPathを取得，名前チェックを行う"""
-            image_path = pathlib.Path(image_path)
-            temp_path = os.path.basename(os.path.normpath(image_path))#名前チェック用の確認用
-            #print(image_path)#読み込んだ確認用
-            for class_id in mask_class:
-                globals()["mask_" + class_id + "_path"] = pathlib.Path(locals()["mask_" + class_id + "_path"])#画像ファイルの名前を取得
-                assert temp_path == os.path.basename(os.path.normpath((locals()["mask_" + class_id + "_path"]))), locals()["mask_" + class_id + "_path"] + 'データセット名不一致です，名前のずれをチェック！'
-                temp_path = os.path.basename(os.path.normpath((locals()["mask_" + class_id + "_path"])))
-
-            """各クラスのフォルダ内画像サイズを取得，サイズチェックを行う"""
-            image = Image.open(image_path)
-            height = image.size[0]
-            width = image.size[1]
-            for class_id in mask_class:
-                globals()["masks_" + class_id] = Image.open(locals()["mask_" + class_id + "_path"])
-                temp_mask = Image.open(locals()["mask_" + class_id + "_path"])
-                assert image.size == temp_mask.size, 'サイズ不一致！'
-
-            """ここも書き換え出来ていません,mask_pathのところは手打ちで変更"""
-            self.add_image(
-                'cell_dataset',
-                path=image_path,
-                image_id=image_path.stem,
-                mask_path=(mask_1day_path, mask_3day_path, mask_5day_path, mask_7day_path, mask_other_path),
-                width=width, height=height)
+                self.add_image(
+                    dataset_name,
+                    path=image_path,
+                    image_id=image_path.stem,
+                    mask_path=(image_path),
+                    width=width, height=height)
 
     def load_mask(self, image_id):
         """マスクデータとクラスidを生成する"""
         #print(image_id)
-        mask_class = ["1day","3day","5day","7day","other"]
         image_info = self.image_info[image_id]
-        mask_1day_path, mask_3day_path, mask_5day_path, mask_7day_path, mask_other_path = image_info['mask_path']
-        for i, class_id in enumerate(mask_class):
-            tmp_mask = img_to_cellpose(str(locals()["mask_" + class_id + "_path"]))
-            locals()["mask_" + class_id], locals()["cls_idxs_" + class_id] = obj_detection(tmp_mask, class_id=i+1)
+        mask_path = image_info['mask_path']
+        for i, class_name in enumerate(mask_class):
+            mask_path = str(mask_path)
+            if class_name in mask_path:
+                class_id = i + 1
+        mask = img_to_cellpose(mask_path)
+        mask, cls_idxs = obj_detection(mask, class_id=class_id)
+        #print(mask_path)
+        #print(cls_idxs)
 
-        """複数のマスク配列を一つの配列に統合する．クラス配列も一つの配列に統合する．"""
-        flag = 0
-        for class_id in mask_class:
-            if locals()["mask_"+class_id] is not None:
-                if flag == 0:
-                    mask = locals()["mask_" + class_id]
-                    cls_idxs = locals()["cls_idxs_" + class_id]
-                    flag = 1
-                else:
-                    mask = np.concatenate([mask, locals()["mask_" + class_id]], axis=2)
-                    cls_idxs = np.concatenate([cls_idxs, locals()["cls_idxs_" + class_id]])
-        if(flag==0):
-            print('Error : ' + image_id + '全てのマスク画像が真っ黒です．rankエラーの原因になるかもしれません．')
         return mask, cls_idxs
 
     def image_reference(self, image_id):
