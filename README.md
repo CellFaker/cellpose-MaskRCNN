@@ -14,7 +14,7 @@ CUDA : 10.1.105
 ```
   git clone https://github.com/CellFaker/cellpose-MaskRCNN/
   cd cellpose-MaskRCNN
-  pip install -r requirment.txt 
+  pip install -r requirments.txt 
 ```
   
   
