@@ -13,6 +13,7 @@ CUDA : 10.1.105
   
 ```
   docker pull tensorflow/tensorflow:1.4.1-devel-gpu-py3
+  docker run -d -it -p 80:80 --name test tensorflow/tensorflow:1.4.1-devel-gpu-py3
 
 ```
 </details>
