@@ -179,6 +179,7 @@ def display_instances_save(image, boxes, masks, class_ids, class_names,
     if auto_show:
         plt.show()
 
+#save
 def display_instances(image, boxes, masks, class_ids, class_names,
                       scores=None, title="",
                       figsize=(16, 16), ax=None,
