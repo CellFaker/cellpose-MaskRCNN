@@ -6,7 +6,7 @@ model_type = 'cyto'
 chan = [0,0]#
 
 #Path Define
-mask_class = ["0day","3day"]
+mask_class = ["0day","3day","5day","7day"]
 dataset_name = "cell_dataset"#保存されるモデル名に反映
 
 #Function Define
@@ -31,7 +31,8 @@ def img_to_cellpose(img_path):
     #io.masks_flows_to_seg(img, masks, flows, diams, img_path, chan)
 
     #save results as png
-    #plt.imsave("test.png",masks)
+    #plt.imsave("test.png",masks
+
 
     return mask
 
@@ -65,13 +66,13 @@ def obj_detection(mask, class_id:int):
 
         return mask, cls_idxs
 
-
 from mrcnn import utils
 from mrcnn.model import log
 import os
 import glob
 import pathlib
 import itertools
+import re
 
 from PIL import Image
 
@@ -87,7 +88,12 @@ class ShapesDataset(utils.Dataset):
         """各クラスのフォルダ内画像Pathを取得"""
         #image_files = [""]*len(mask_class)
         for i, class_name in enumerate(mask_class):
-            image_paths = glob.glob(os.path.join(dataset_dir, class_name, "*.png"))
+            #名前順からファイル名に含まれる番号順にソート、miruで結果をわかりやすくするために。
+            file_path_list = glob.glob(os.path.join(dataset_dir, class_name, "*.jpg"))
+            file_name_list = [os.path.basename(file_path) for file_path in file_path_list]
+            file_name_list_sorted = sorted(file_name_list, key=lambda x:int((re.search(r"[0-9]+", x)).group(0)))
+            dir_path = os.path.join(dataset_dir, class_name)
+            image_paths = [os.path.join(dir_path, file) for file in file_name_list_sorted]
 
             for image_path in image_paths:
                 image_path = pathlib.Path(image_path)
@@ -104,7 +110,6 @@ class ShapesDataset(utils.Dataset):
 
     def load_mask(self, image_id):
         """マスクデータとクラスidを生成する"""
-        #print(image_id)
         image_info = self.image_info[image_id]
         mask_path = image_info['mask_path']
         for i, class_name in enumerate(mask_class):
