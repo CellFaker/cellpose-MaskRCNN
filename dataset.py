@@ -8,11 +8,13 @@ chan = [0,0]#
 #Path Define
 mask_class = ["0day","3day","5day","7day"]
 dataset_name = "cell_dataset"#保存されるモデル名に反映
+data_type = "png"
 
 #Function Define
 from cellpose import models, io
 import matplotlib.pyplot as plt
 import numpy as np
+from inference import Inference
 
 # DEFINE CELLPOSE MODEL
 # model_type='cyto' or model_type='nuclei'
@@ -89,7 +91,7 @@ class ShapesDataset(utils.Dataset):
         #image_files = [""]*len(mask_class)
         for i, class_name in enumerate(mask_class):
             #名前順からファイル名に含まれる番号順にソート、miruで結果をわかりやすくするために。
-            file_path_list = glob.glob(os.path.join(dataset_dir, class_name, "*.jpg"))
+            file_path_list = glob.glob(os.path.join(dataset_dir, class_name, "*." + data_type))
             file_name_list = [os.path.basename(file_path) for file_path in file_path_list]
             file_name_list_sorted = sorted(file_name_list, key=lambda x:int((re.search(r"[0-9]+", x)).group(0)))
             dir_path = os.path.join(dataset_dir, class_name)
@@ -116,6 +118,9 @@ class ShapesDataset(utils.Dataset):
             mask_path = str(mask_path)
             if class_name in mask_path:
                 class_id = i + 1
+        #セルポーズの教師か自己推論教師かを選ぶ
+        #mask, cls_idxs = Inference(mask_path)
+        
         mask = img_to_cellpose(mask_path)
         mask, cls_idxs = obj_detection(mask, class_id=class_id)
         #print(mask_path)
