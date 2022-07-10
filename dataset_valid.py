@@ -6,8 +6,8 @@ model_type = 'cyto'
 chan = [0,0]#
 
 #Path Define
-mask_class = ["0day","3day","5day","7day"]
-dataset_name = "valid_0622"#保存されるモデル名に反映
+mask_class =  ["0day","3day","5day","7day"]
+dataset_name = "miru_valid_0706"#保存されるモデル名に反映
 data_type = "png"
 class_color = [213, 228, 63, 239, 230]#unique.img[:,:,2]の値と[赤、黄色、青、オレンジ、ピンク]が相当
 
@@ -15,6 +15,7 @@ class_color = [213, 228, 63, 239, 230]#unique.img[:,:,2]の値と[赤、黄色�
 from cellpose import models, io
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 # DEFINE CELLPOSE MODEL
 # model_type='cyto' or model_type='nuclei'
@@ -67,7 +68,7 @@ def obj_detection(mask, class_id:int):
 
         return mask, cls_idxs
 
-def valid_load(mask, cls_idxs, filename):
+def valid_load(mask, cls_idxs, filepath):
     """
     Args:
         mask:[w, h, N]
@@ -77,7 +78,8 @@ def valid_load(mask, cls_idxs, filename):
         mask
         cls_idxs
     """
-    valid_img = cv2.imread(os.path.join(dataset_name, "valid", filename))
+    valid_img = cv2.imread(filepath)
+    print(mask.shape)
     mask_t = mask.transpose(2, 0 ,1)
 
     #validの色ごとにクラスを書き換える
@@ -90,8 +92,16 @@ def valid_load(mask, cls_idxs, filename):
         ymax = np.max(pos[0])
 
         #validデータの色からクラスを特定
-        obj_img = valid_img[xmin:xmax, ymin:ymax]
-        class_id = class_color.index(np.unique(obj_img[:,:,2][0])
+        obj_img = valid_img[ymin:ymax, xmin:xmax]
+        tmp = np.unique(obj_img[:,:,2])
+
+        print(tmp)
+        cv2.imwrite(filepath + str(i) + ".png", obj_img)
+
+        if(tmp[0] in class_color)==True:
+            class_id = class_color.index(tmp[0]) + 1
+        else:
+            class_id = 0
         cls_idxs[i] = class_id
 
         #クラス4を1に変更
@@ -119,40 +129,37 @@ class ShapesDataset(utils.Dataset):
 
         """各クラスのフォルダ内画像Pathを取得"""
         #image_files = [""]*len(mask_class)
-        for i, class_name in enumerate(mask_class):
-            image_paths = glob.glob(os.path.join(dataset_dir, class_name,"*." + data_type))
-            print(len(image_paths))
+        image_paths = glob.glob(os.path.join(dataset_dir, "image","*." + data_type))
+        print(len(image_paths))
 
-            for image_path in image_paths:
-                image_path = pathlib.Path(image_path)
-                image = Image.open(image_path)
-                height = image.size[0]
-                width = image.size[1]
+        for image_path in image_paths:
+            image_path = pathlib.Path(image_path)
+            mask_path = os.path.join(dataset_dir, "mask", os.path.basename(image_path))
+            image = Image.open(image_path)
+            height = image.size[0]
+            width = image.size[1]
 
-                self.add_image(
-                    dataset_name,
-                    path=image_path,
-                    image_id=image_path.stem,
-                    mask_path=(image_path),
-                    width=width, height=height)
+            self.add_image(
+                dataset_name,
+                path=image_path,
+                image_id=image_path.stem,
+                mask_path=(mask_path),
+                width=width, height=height)
 
     def load_mask(self, image_id):
         """マスクデータとクラスidを生成する"""
         image_info = self.image_info[image_id]
         mask_path = image_info['mask_path']
-        for i, class_name in enumerate(mask_class):
-            mask_path = str(mask_path)
-            if class_name in mask_path:
-                class_id = i + 1
         mask = img_to_cellpose(mask_path)
-        mask, cls_idxs = obj_detection(mask, class_id=class_id)
+        mask, cls_idxs = obj_detection(mask, class_id=1)
 
-        mask_filename = os.basename(mask_path)
-        mask, cls_idxs = valid_load(mask, cls_idxs, mask_filename)
-        #print(mask_path)
-        #print(cls_idxs)
-
-        return mask, cls_idxs
+        if cls_idxs[0]==None:
+            return mask, cls_idxs
+        else:
+            mask, cls_idxs = valid_load(mask, cls_idxs, mask_path)
+            print(mask_path)
+            print(cls_idxs)
+            return mask, cls_idxs
 
     def image_reference(self, image_id):
         """Return the path of the image."""
