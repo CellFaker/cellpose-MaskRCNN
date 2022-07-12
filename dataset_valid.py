@@ -79,7 +79,7 @@ def valid_load(mask, cls_idxs, filepath):
         cls_idxs
     """
     valid_img = cv2.imread(filepath)
-    print(mask.shape)
+    #print(mask.shape)
     mask_t = mask.transpose(2, 0 ,1)
 
     #validの色ごとにクラスを書き換える
@@ -95,8 +95,7 @@ def valid_load(mask, cls_idxs, filepath):
         obj_img = valid_img[ymin:ymax, xmin:xmax]
         tmp = np.unique(obj_img[:,:,2])
 
-        print(tmp)
-        cv2.imwrite(filepath + str(i) + ".png", obj_img)
+        #cv2.imwrite(filepath + str(i) + ".png", obj_img)
 
         if(tmp[0] in class_color)==True:
             class_id = class_color.index(tmp[0]) + 1
@@ -105,7 +104,7 @@ def valid_load(mask, cls_idxs, filepath):
         cls_idxs[i] = class_id
 
         #クラス4を1に変更
-        cls_idxs = np.where(cls_idxs==4, 1, cls_idxs)
+        cls_idxs = np.where(cls_idxs==5, 1, cls_idxs)
     
     return mask, cls_idxs
 
@@ -130,7 +129,6 @@ class ShapesDataset(utils.Dataset):
         """各クラスのフォルダ内画像Pathを取得"""
         #image_files = [""]*len(mask_class)
         image_paths = glob.glob(os.path.join(dataset_dir, "image","*." + data_type))
-        print(len(image_paths))
 
         for image_path in image_paths:
             image_path = pathlib.Path(image_path)
@@ -150,15 +148,17 @@ class ShapesDataset(utils.Dataset):
         """マスクデータとクラスidを生成する"""
         image_info = self.image_info[image_id]
         mask_path = image_info['mask_path']
-        mask = img_to_cellpose(mask_path)
+        image_path = str(image_info['path'])
+        mask = img_to_cellpose(image_path)
         mask, cls_idxs = obj_detection(mask, class_id=1)
-
-        if cls_idxs[0]==None:
+        #print(cls_idxs)
+        if cls_idxs is None:
             return mask, cls_idxs
         else:
             mask, cls_idxs = valid_load(mask, cls_idxs, mask_path)
-            print(mask_path)
-            print(cls_idxs)
+            #print(mask_path)
+            #print(cls_idxs)
+            #print(mask.shape)
             return mask, cls_idxs
 
     def image_reference(self, image_id):
