@@ -4,6 +4,7 @@
 #Parameter Define
 model_type = 'cyto'
 chan = [0,0]#
+cell_size_px = 40
 
 #Path Define
 mask_class =  ["0day","3day","5day","7day"]
@@ -28,7 +29,7 @@ def img_to_cellpose(img_path):
     """
     model = models.Cellpose(gpu=False, model_type=model_type)
     img = io.imread(img_path)
-    mask, flows, styles, diams = model.eval(img, diameter=None, channels=chan)
+    mask, flows, styles, diams = model.eval(img, diameter=cell_size_px, channels=chan)
 
     # save results so you can load in gui
     #io.masks_flows_to_seg(img, masks, flows, diams, img_path, chan)
