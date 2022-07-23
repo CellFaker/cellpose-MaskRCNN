@@ -36,8 +36,10 @@ def Inference(img_path):
 
     #trainで読み込めるように型変換
     mask = r['masks']
-    mask = np.array(mask, dtype='uint8')
+    mask = np.array(mask, dtype=np.uint8)
     mask[:, :, :] = np.where((mask[:, :, :]==False), 0 , 1) 
 
-    return mask, r['class_ids']
+    cls_idxs = np.array(r['class_ids'] ,dtype=np.int32)
+
+    return mask, cls_idxs
 
