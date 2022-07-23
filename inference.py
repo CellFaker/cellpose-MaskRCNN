@@ -14,15 +14,7 @@ from mrcnn.train_config import train_Config
 import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 
-#For multi GPU 
-config_gpu = tf.ConfigProto()
-config_gpu.allow_soft_placement=True
-session = tf.Session(config=config_gpu)
-KTF.set_session(session)
 
-config = train_Config()
-model = modellib.MaskRCNN(mode="inference", model_dir=model_path,config=config)
-model.load_weights(model_path, by_name=True)
 
 #dataset.load_mask()の代わり
 def Inference(img_path):
@@ -30,6 +22,15 @@ def Inference(img_path):
     Args:
         img_path:[string]
     """
+    #For multi GPU 
+    config_gpu = tf.ConfigProto()
+    config_gpu.allow_soft_placement=True
+    session = tf.Session(config=config_gpu)
+    KTF.set_session(session)
+
+    config = train_Config()
+    model = modellib.MaskRCNN(mode="inference", model_dir=model_path, config=config)
+    model.load_weights(model_path, by_name=True)
     image = np.array(Image.open(img_path))
     results = model.detect([image], verbose=0)
     r = results[0]
