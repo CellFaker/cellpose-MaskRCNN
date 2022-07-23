@@ -2,7 +2,7 @@
 #img PATHを指定して推論，mask配列とclass配列を返す
 
 #Path Define
-model_path = "./logs/3+2.h5"
+model_path = "./logs/4+0723.h5"
 
 from PIL import Image
 import numpy as np
@@ -36,8 +36,8 @@ def Inference(img_path):
 
     #trainで読み込めるように型変換
     mask = r['masks']
-    mask = np.array(mask)
-    mask[:, :] = np.where((mask[:, :]==False), 0 , 1) 
+    mask = np.array(mask, dtype='uint8')
+    mask[:, :, :] = np.where((mask[:, :, :]==False), 0 , 1) 
 
     return mask, r['class_ids']
 
