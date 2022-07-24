@@ -2,9 +2,9 @@
 #データセットのフォルダを指定してMaskRCNNが学習できるDatasetに変更する。
 
 #Parameter Define
-model_type = 'cyto'
+model_type = 'cyto'#['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general','CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4']
 chan = [0,0]#
-cell_size_px = 40
+cell_size_px = 30
 
 #Path Define
 mask_class =  ["0day","3day","5day","7day"]
@@ -85,36 +85,41 @@ def valid_load(mask, cls_idxs, filepath):
 
     #validの色ごとにクラスを書き換える
     for i in range(len(cls_idxs)):
-        #バウンディングボックス作成
-        pos = np.where(mask_t[i]==1)
-        xmin = np.min(pos[1])
-        xmax = np.max(pos[1])
-        ymin = np.min(pos[0])
-        ymax = np.max(pos[0])
+        try:
+            #バウンディングボックス作成
+            pos = np.where(mask_t[i]==1)
+            xmin = np.min(pos[1])
+            xmax = np.max(pos[1])
+            ymin = np.min(pos[0])
+            ymax = np.max(pos[0])
 
-        #validデータの色からクラスを特定
-        obj_img = valid_img[ymin:ymax, xmin:xmax]
-        tmp = np.unique(obj_img[:,:,2])
+            #validデータの色からクラスを特定
+            obj_img = valid_img[ymin:ymax, xmin:xmax]
+            tmp = np.unique(obj_img[:,:,2])
 
-        #cv2.imwrite(filepath + str(i) + ".png", obj_img)
+            #cv2.imwrite(filepath + str(i) + ".png", obj_img)
 
-        if(tmp[0] in class_color)==True:
-            class_id = class_color.index(tmp[0]) + 1
-        else:
-            class_id = 0
-        cls_idxs[i] = class_id
+            if(tmp[0] in class_color)==True:
+                class_id = class_color.index(tmp[0]) + 1
+            else:
+                class_id = 0
+            cls_idxs[i] = class_id
 
-        #クラス4を1に変更
-        cls_idxs = np.where(cls_idxs==5, 1, cls_idxs)
+            #クラス4を1に変更
+            cls_idxs = np.where(cls_idxs==5, 1, cls_idxs)
+            return mask, cls_idxs
+
+        except:
+            return None, None
     
-    return mask, cls_idxs
-
+        
 from mrcnn import utils
 from mrcnn.model import log
 import os
 import glob
 import pathlib
 import itertools
+import re
 
 from PIL import Image
 
@@ -130,6 +135,12 @@ class ShapesDataset(utils.Dataset):
         """各クラスのフォルダ内画像Pathを取得"""
         #image_files = [""]*len(mask_class)
         image_paths = glob.glob(os.path.join(dataset_dir, "image","*." + data_type))
+            #名前順からファイル名に含まれる番号順にソート、miruで結果をわかりやすくするために。
+        file_path_list = glob.glob(os.path.join(dataset_dir, "image", "*." + data_type))
+        file_name_list = [os.path.basename(file_path) for file_path in file_path_list]
+        file_name_list_sorted = sorted(file_name_list, key=lambda x:int((re.search(r"[0-9]+", x)).group(0)))
+        dir_path = os.path.join(dataset_dir, "image")
+        image_paths = [os.path.join(dir_path, file) for file in file_name_list_sorted]
 
         for image_path in image_paths:
             image_path = pathlib.Path(image_path)
